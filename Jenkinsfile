@@ -1,3 +1,7 @@
+properties: [
+	pipelineTriggers([[$class: "TimerTrigger", spec: "0 H/2 * * *",
+		includeBranchesSpec: "topic/virt-x86-candidate"]])
+]
 stage ("Builds") {
 	parallel ('xenial': {
 		if (!env.BRANCH_NAME.contains("experiment/automatic-removal")) {
