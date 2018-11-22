@@ -374,6 +374,8 @@ build_rsdp(GArray *rsdp_table, BIOSLinker *linker, unsigned xsdt_tbl_offset)
     unsigned xsdt_pa_size = sizeof(rsdp->xsdt_physical_address);
     unsigned xsdt_pa_offset =
         (char *)&rsdp->xsdt_physical_address - rsdp_table->data;
+    unsigned xsdt_offset =
+        (char *)&rsdp->length - rsdp_table->data;
 
     bios_linker_loader_alloc(linker, ACPI_BUILD_RSDP_FILE, rsdp_table, 16,
                              true /* fseg memory */);
@@ -388,10 +390,15 @@ build_rsdp(GArray *rsdp_table, BIOSLinker *linker, unsigned xsdt_tbl_offset)
         ACPI_BUILD_RSDP_FILE, xsdt_pa_offset, xsdt_pa_size,
         ACPI_BUILD_TABLE_FILE, xsdt_tbl_offset);
 
-    /* Checksum to be filled by Guest linker */
+    /* Legacy checksum to be filled by Guest linker */
+    bios_linker_loader_add_checksum(linker, ACPI_BUILD_RSDP_FILE,
+        (char *)rsdp - rsdp_table->data, xsdt_offset,
+        (char *)&rsdp->checksum - rsdp_table->data);
+
+    /* Extended checksum to be filled by Guest linker */
     bios_linker_loader_add_checksum(linker, ACPI_BUILD_RSDP_FILE,
         (char *)rsdp - rsdp_table->data, sizeof *rsdp,
-        (char *)&rsdp->checksum - rsdp_table->data);
+        (char *)&rsdp->extended_checksum - rsdp_table->data);
 }
 
 static void
