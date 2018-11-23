@@ -388,27 +388,41 @@ build_rsdp(GArray *tbl, BIOSLinker *linker, AcpiRsdpData *rsdp_data)
     /* Space for the RSDT address (32 bit) */
     build_append_int_noprefix(tbl, 0, 4);
 
-    /* Length */
-    build_append_int_noprefix(tbl, 36, 4);
+    if (rsdp_data->revision == ACPI_RSDP_REV_1 &&
+        rsdp_data->rsdt_tbl_offset) { /* Legacy RSDP */
+                /* RSDT address to be filled by guest linker */
+                bios_linker_loader_add_pointer(linker,
+                                               ACPI_BUILD_RSDP_FILE, 16, 4,
+                                               ACPI_BUILD_TABLE_FILE,
+                                               *rsdp_data->rsdt_tbl_offset);
+    } else { /* ACPI 2.0 and later */
+        /* Length */
+        build_append_int_noprefix(tbl, 36, 4);
 
-    /* XSDT address to be filled by guest linker */
-    build_append_int_noprefix(tbl, 0, 8); /* XSDT address (64 bit) */
-    bios_linker_loader_add_pointer(linker,
-                                   ACPI_BUILD_RSDP_FILE, 24, 8,
-                                   ACPI_BUILD_TABLE_FILE,
-                                   *rsdp_data->xsdt_tbl_offset);
+        /* XSDT address to be filled by guest linker */
+        build_append_int_noprefix(tbl, 0, 8); /* XSDT address (64 bit) */
+        if (rsdp_data->xsdt_tbl_offset) {
+            bios_linker_loader_add_pointer(linker,
+                                           ACPI_BUILD_RSDP_FILE, 24, 8,
+                                           ACPI_BUILD_TABLE_FILE,
+                                           *rsdp_data->xsdt_tbl_offset);
 
-    /* Space for the extended checksum */
-    build_append_int_noprefix(tbl, 0, 1);
+        }
 
-    /* Space for the reserved bytes */
-    build_append_int_noprefix(tbl, 0, 3);
+        /* Space for the extended checksum */
+        build_append_int_noprefix(tbl, 0, 1);
+
+        /* Space for the reserved bytes */
+        build_append_int_noprefix(tbl, 0, 3);
+    }
 
     /* Legacy checksum to be filled by guest linker */
     bios_linker_loader_add_checksum(linker, ACPI_BUILD_RSDP_FILE, 0, 20, 8);
 
-    /* Extended checksum to be filled by Guest linker */
-    bios_linker_loader_add_checksum(linker, ACPI_BUILD_RSDP_FILE, 0, 36, 32);
+    if (rsdp_data->revision != ACPI_RSDP_REV_1) {
+        /* Extended checksum to be filled by Guest linker */
+        bios_linker_loader_add_checksum(linker, ACPI_BUILD_RSDP_FILE, 0, 36, 32);
+    }
 }
 
 static void
